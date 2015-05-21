@@ -1,0 +1,25 @@
+language: scala
+
+scala:
+  - 2.11.6
+
+# only trigger builds on master
+branches:
+  only:
+    - master
+
+script:
+  - "sbt test"
+
+services:
+    - couchdb
+
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq jsvc
+
+before_script:
+  - "echo \"couchdb := None\n\ncouchPort := 5984\n\" > build.sbt"
+
+after_script:
+  - "cat /tmp/bluelatex.err"
