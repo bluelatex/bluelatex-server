@@ -26,7 +26,11 @@ import scala.concurrent.Future
 
 import config._
 
+import org.slf4j.LoggerFactory
+
 class Server(conf: Config) extends StdReaders {
+
+  val logger = LoggerFactory.getLogger(getClass)
 
   implicit val system = ActorSystem("bluelatex")
   implicit val materializer = ActorMaterializer()
@@ -58,8 +62,15 @@ class Server(conf: Config) extends StdReaders {
   private var bindingFuture: Future[Http.ServerBinding] = null
 
   def start(): Unit =
-    if (bindingFuture == null)
-      bindingFuture = Http().bindAndHandle(prefixed, conf.as[String]("bluelatex.http.host"), conf.as[Int]("bluelatex.http.port"))
+    if (bindingFuture == null) {
+      val host = conf.as[String]("bluelatex.http.host")
+      val port = conf.as[Int]("bluelatex.http.port")
+      bindingFuture = Http().bindAndHandle(prefixed, host, port)
+      bindingFuture.onFailure {
+        case e: Exception =>
+          logger.error(f"Failed to bind to $host, $port", e)
+      }
+    }
 
   def stop(): Unit =
     if (bindingFuture != null) {

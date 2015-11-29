@@ -22,17 +22,28 @@ import akka.stream.ActorMaterializer
 
 import com.typesafe.config.ConfigFactory
 
+import org.slf4j.LoggerFactory
+
 import scala.io.StdIn
 
+/** The entry point of the \BlueLaTeX application.
+ *  It starts everything, loads the configuration and the logging settings.
+ *
+ */
 object BlueLaTeX extends App {
 
+  val logger = LoggerFactory.getLogger(getClass)
+
+  // create the server
   val server = new Server(ConfigFactory.load)
+
+  sys.addShutdownHook {
+    logger.info("\\BlueLaTeX has been killed")
+    server.stop()
+  }
 
   server.start()
 
-  println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
-  StdIn.readLine // for the future transformations
-
-  server.stop()
+  logger.info("\\BlueLaTeX is up and running")
 
 }
