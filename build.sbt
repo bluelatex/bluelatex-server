@@ -38,6 +38,7 @@ lazy val bluelatex = project.in(file("."))
 
 lazy val coreDeps = Seq(
   "com.typesafe.akka" %% "akka-http-experimental" % "2.0-M1",
+  "com.typesafe.akka" %% "akka-http-spray-json-experimental" % "2.0-M1",
   "ch.qos.logback" % "logback-classic" % "1.1.3",
   "org.slf4j" % "jcl-over-slf4j" % "1.7.13",
   "net.ceedubs" %% "ficus" % "1.1.2",

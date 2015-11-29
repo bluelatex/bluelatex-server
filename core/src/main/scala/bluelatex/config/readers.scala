@@ -19,6 +19,8 @@ import scala.util.Try
 
 import scala.concurrent.duration.FiniteDuration
 
+import scala.collection.JavaConverters._
+
 import com.typesafe.config.Config
 
 import java.net.URI
@@ -65,6 +67,11 @@ trait StdReaders {
   implicit object UriConfigReader extends ConfigReader[URI] {
     def read(config: Config, path: String) =
       new URI(config.getString(path))
+  }
+
+  implicit object StringListConfigReader extends ConfigReader[List[String]] {
+    def read(config: Config, path: String) =
+      config.getStringList(path).asScala.toList
   }
 
 }

@@ -32,15 +32,19 @@ class Server(conf: Config) extends StdReaders {
   implicit val materializer = ActorMaterializer()
   implicit val ec = system.dispatcher
 
-  val prefix = conf.as[String]("bluelatex.api.prefix")
+  val prefix =
+    conf.as[String]("bluelatex.api.prefix")
+
+  val services =
+    conf.as[List[String]]("bluelatex.api.services")
 
   val route =
-    path("hello") {
-      get {
-        complete {
-          "toto"
-        }
-      }
+    services match {
+      case s :: sl =>
+        def serv(s: String): Service = Class.forName(s).newInstance.asInstanceOf[Service]
+        sl.foldLeft(serv(s).route)((acc, s) => acc ~ serv(s).route)
+      case Nil =>
+        reject
     }
 
   val prefixed =
