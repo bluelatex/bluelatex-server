@@ -32,6 +32,8 @@ class Server(conf: Config) extends StdReaders {
   implicit val materializer = ActorMaterializer()
   implicit val ec = system.dispatcher
 
+  val prefix = conf.as[String]("bluelatex.api.prefix")
+
   val route =
     path("hello") {
       get {
@@ -41,11 +43,19 @@ class Server(conf: Config) extends StdReaders {
       }
     }
 
+  val prefixed =
+    if (prefix.isEmpty)
+      route
+    else
+      pathPrefix(separateOnSlashes(prefix)) {
+        route
+      }
+
   private var bindingFuture: Future[Http.ServerBinding] = null
 
   def start(): Unit =
     if (bindingFuture == null)
-      bindingFuture = Http().bindAndHandle(route, conf.as[String]("bluelatex.http.host"), conf.as[Int]("bluelatex.http.port"))
+      bindingFuture = Http().bindAndHandle(prefixed, conf.as[String]("bluelatex.http.host"), conf.as[Int]("bluelatex.http.port"))
 
   def stop(): Unit =
     if (bindingFuture != null) {
