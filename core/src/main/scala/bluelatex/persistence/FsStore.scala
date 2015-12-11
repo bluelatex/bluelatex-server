@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package bluelatex.persistence
+package bluelatex
+package persistence
 
 import scala.collection.mutable.{
   Map,
@@ -48,6 +49,10 @@ import java.nio.charset.CodingErrorAction
 import better.files._
 import Cmds._
 
+import com.typesafe.config.ConfigFactory
+
+import config._
+
 object FsStore {
 
   val codec = Codec("UTF-8")
@@ -62,9 +67,10 @@ class FsStore(file: File) extends Actor with Stash {
 
   val children = Map.empty[String, ActorRef]
 
+  val conf = ConfigFactory.load()
+
   // set an initial delay, if no message is received within this period, the actor is killed
-  // TODO make it configurable
-  context.setReceiveTimeout(30.seconds)
+  context.setReceiveTimeout(conf.as[Duration]("bluelatex.persistence.fs.timeout"))
 
   def getOrCreate(name: String): ActorRef =
     children.get(name) match {
@@ -126,6 +132,7 @@ class FsStore(file: File) extends Actor with Stash {
         file.delete()
 
         sender ! Unit
+        self ! PoisonPill
       } catch {
         case e: Exception =>
           sender ! Status.Failure(e)
