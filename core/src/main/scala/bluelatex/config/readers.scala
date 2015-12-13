@@ -17,7 +17,10 @@ package bluelatex.config
 
 import scala.util.Try
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{
+  FiniteDuration,
+  Duration
+}
 
 import scala.collection.JavaConverters._
 
@@ -53,10 +56,15 @@ trait StdReaders {
       config.getLong(path)
   }
 
-  implicit object DurationConfigReader extends ConfigReader[FiniteDuration] {
+  implicit object DurationConfigReader extends ConfigReader[Duration] {
     import java.util.concurrent.TimeUnit
     def read(config: Config, path: String) =
-      FiniteDuration(config.getDuration(path, TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
+      if (config.getString(path) == "undefined")
+        Duration.Undefined
+      else if (config.getString(path) == "infinite")
+        Duration.Inf
+      else
+        FiniteDuration(config.getDuration(path, TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
   }
 
   implicit object BooleanConfigReader extends ConfigReader[Boolean] {
