@@ -17,6 +17,33 @@ package bluelatex
 
 import spray.json._
 
-trait BlueLaTeXProtocol extends DefaultJsonProtocol
+import synchro._
+
+import better.files._
+
+trait BlueLaTeXProtocol extends SyncJsonProtocol {
+
+  implicit object fileWriter extends JsonWriter[File] {
+
+    def write(file: File): JsObject =
+      file match {
+        case f @ RegularFile(_) =>
+          JsObject(
+            Map(
+              "type" -> JsString("file"),
+              "name" -> JsString(f.name)))
+        case d @ Directory(children) =>
+          JsObject(
+            Map(
+              "type" -> JsString("directory"),
+              "name" -> JsString(d.name),
+              "children" -> JsArray(children.map(write(_)).toVector)))
+        case _ =>
+          serializationError(f"$file cannot be serialized to a json object")
+      }
+
+  }
+
+}
 
 object BlueLaTeXProtocol extends BlueLaTeXProtocol
