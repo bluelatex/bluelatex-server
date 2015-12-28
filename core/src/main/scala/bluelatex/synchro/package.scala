@@ -13,21 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package bluelatex.persistence
+package bluelatex
 
-import scala.collection.mutable.Set
+import spray.json._
 
-/** Some data to persist.
- *  Data is organized as a tree of `Container`s composed of sub-data.
- *  Leaves represent the content.
- *  This abstraction makes it possible have several storage kinds.
- *  Typically, in a filesystem storage, containers are directories and leaves are files.
- *
- */
-sealed trait Data {
-  val name: String
+package object synchro {
+  type PeerId = String
+  type PaperId = String
+  type Filepath = List[String]
+
+  def leavingMessage(paperId: String) =
+    JsObject(
+      Map(
+        "event" -> JsString("part"),
+        "paperid" -> JsString(paperId)))
+
+  def joiningMessage(paperId: String) =
+    JsObject(
+      Map(
+        "event" -> JsString("join"),
+        "paperid" -> JsString(paperId)))
+
+  def idlingMessage(paperId: String) =
+    JsObject(
+      Map(
+        "event" -> JsString("idle"),
+        "paperid" -> JsString(paperId)))
+
 }
-
-final case class Container(name: String)(var elements: Set[Data]) extends Data
-
-final case class Leaf(name: String)(var content: String) extends Data

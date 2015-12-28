@@ -43,7 +43,10 @@ import scala.concurrent.duration._
 
 import scala.io.Codec
 
-import java.io.IOException
+import java.io.{
+  IOException,
+  FileNotFoundException
+}
 import java.nio.charset.CodingErrorAction
 
 import better.files._
@@ -52,6 +55,8 @@ import Cmds._
 import com.typesafe.config.ConfigFactory
 
 import config._
+
+import scala.annotation.tailrec
 
 object FsStore {
 
@@ -65,158 +70,88 @@ class FsStore(file: File) extends Actor with Stash {
 
   import FsStore._
 
-  val children = Map.empty[String, ActorRef]
-
   val conf = ConfigFactory.load()
 
   // set an initial delay, if no message is received within this period, the actor is killed
   context.setReceiveTimeout(conf.as[Duration]("bluelatex.persistence.fs.timeout"))
 
-  def getOrCreate(name: String): ActorRef =
-    children.get(name) match {
-      case Some(a) =>
-        a
-      case None =>
-        val a = context.actorOf(Props(classOf[FsStore], file / name), name)
-        children(name) = a
-        context.watch(a)
-        a
-    }
-
-  def receive = initial
-
-  val initial: Receive = {
+  def receive = {
 
     case Save(data) =>
 
-      val ref = getOrCreate(data.name)
-      val f = file / data.name
-
-      // we are asked to save some data. but what kind of data is it?
-      data match {
-        case cont @ Container(name) =>
-          try {
-            if (f.exists)
-              f.delete()
-            mkdirs(f)
-
-            for (e <- cont.elements) {
-              ref ! Save(e)
-            }
-            context.become(saving(sender, Set.empty[String]))
-          } catch {
-            case e: Exception =>
-              sender ! Status.Failure(e)
-          }
-
-        case leaf @ Leaf(name) =>
-          try {
-            // if the leaf already exists and is a directory, remove it
-            if (f.isDirectory)
-              f.delete()
-
-            // write content into the file (erase previous content if any)
-            f.overwrite(leaf.content)
-
-            sender ! Unit
-          } catch {
-            case e: Exception =>
-              sender ! Status.Failure(e)
-          }
-
-      }
-
-    case Delete(Nil) =>
       try {
-        // delete this file
-        file.delete()
-
+        save(file, data)
         sender ! Unit
-        self ! PoisonPill
       } catch {
         case e: Exception =>
           sender ! Status.Failure(e)
       }
 
-    case Delete(h :: t) =>
-      // delete the given child
-      file match {
-        case Directory(_) =>
-          getOrCreate(h).forward(Delete(t))
-        case RegularFile(_) =>
-          sender ! Status.Failure(new IOException(f"$file is not a directory"))
+    case Delete(p) =>
+      try {
+        delete(file, p)
+        sender ! Unit
+      } catch {
+        case e: Exception =>
+          sender ! Status.Failure(e)
       }
 
-    case Load(Nil) =>
-      // load the data represented by this actor
-      file match {
-        case Directory(files) =>
-          for (f <- files)
-            getOrCreate(f.name) ! Load(Nil)
-          context.become(loading(sender, Set.empty[Data]))
-        case f @ RegularFile(_) =>
-          sender ! Leaf(f.name)(f.contentAsString)
-        case _ =>
-          sender ! Status.Failure(new IOException(f"$file is not a regular file or directory"))
+    case Load(p) =>
+      try {
+        sender ! load(file, p)
+      } catch {
+        case e: Exception =>
+          sender ! Status.Failure(e)
       }
-
-    case Load(h :: t) =>
-      file match {
-        case Directory(_) =>
-          getOrCreate(h).forward(Load(t))
-        case _ =>
-          sender ! Status.Failure(new IOException(f"$file is not a directory"))
-      }
-
-    case Terminated(child) =>
-      // the children actor is no more active, remove it from the watched actors
-      children -= child.path.name
 
     case ReceiveTimeout =>
       context.stop(self)
 
   }
 
-  def loading(original: ActorRef, loaded: Set[Data]): Receive = {
+  private def save(file: File, data: Data): Unit =
+    if (data.size > 0) {
 
-    case d: Data =>
-      loaded += d
-      if (loaded.size == children.size) {
-        original ! Container(file.name)(loaded)
-        unstashAll()
-        context.become(initial)
-      }
+      if (file.exists && !file.isDirectory)
+        file.delete()
+      mkdirs(file)
 
-    case Load(_) | Save(_) | Delete(_) =>
-      // stash to treat it later
-      stash()
+      for ((name, d) <- data.children)
+        save(file / name, d)
 
-    case Terminated(child) =>
-      // the children actor is no more active, remove it from the watched actors
-      children -= child.path.name
-      loaded.filterNot(_.name == child.path.name)
+    } else data.content match {
+      case Some(c) =>
+        file.overwrite(c)
+      case None =>
+        mkdirs(file)
+    }
 
-  }
+  @tailrec
+  private def delete(file: File, path: List[String]): Unit =
+    path match {
+      case Nil    => file.delete()
+      case h :: t => delete(file / h, t)
+    }
 
-  def saving(original: ActorRef, saved: Set[String]): Receive = {
-
-    case Unit =>
-      saved += sender.path.name
-      if (saved.size == children.size) {
-        original ! Unit
-        unstashAll()
-        context.become(initial)
-      }
-
-    case Load(_) | Save(_) | Delete(_) =>
-      // stash to treat it later
-      stash()
-
-    case Terminated(child) =>
-      // the children actor is no more active, remove it from the watched actors
-      children -= child.path.name
-      saved -= child.path.name
-
-  }
+  private def load(file: File, path: List[String]): Data =
+    path match {
+      case Nil =>
+        file match {
+          case Directory(files) =>
+            val d = Data()
+            val children =
+              for (f <- files) {
+                val child = load(f, Nil)
+                d(f.name) = child
+              }
+            d
+          case f @ RegularFile(_) =>
+            Data(f.contentAsString)
+          case _ =>
+            throw new FileNotFoundException(f"$file is not a regular file or directory")
+        }
+      case h :: t =>
+        load(file / h, t)
+    }
 
 }
