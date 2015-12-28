@@ -26,6 +26,7 @@ lazy val bluelatex = project.in(file("."))
   .settings(
     name := "bluelatex",
     scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none",
+    fork := true,
     maintainer in Linux := "The \\BlueLaTeX Teams <blue-dev@lists.gnieh.org>",
     packageSummary in Linux := "\\BlueLaTeX core server",
     packageDescription := """\BlueLaTeX is a server that allows for real-time collaborative document editing.
@@ -37,8 +38,8 @@ lazy val bluelatex = project.in(file("."))
   .aggregate(core)
 
 lazy val coreDeps = Seq(
-  "com.typesafe.akka" %% "akka-http-experimental" % "2.0",
-  "com.typesafe.akka" %% "akka-http-spray-json-experimental" % "2.0",
+  "com.typesafe.akka" %% "akka-http-experimental" % "2.0.1",
+  "com.typesafe.akka" %% "akka-http-spray-json-experimental" % "2.0.1",
   "com.typesafe.akka" %% "akka-testkit" % "2.4.1" % "test",
   "org.scalatest" %% "scalatest" % "2.2.4" % "test",
   "ch.qos.logback" % "logback-classic" % "1.1.3",

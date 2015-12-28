@@ -15,4 +15,4 @@
  */
 package bluelatex
 
-case class CmdLine(debug: Boolean = false)
+case class CmdLine(debug: Boolean = false, conf: Option[String] = None)

@@ -36,6 +36,10 @@ object BlueLaTeX extends App {
 
   val optionParser = new OptionParser[CmdLine]("bluelatex") {
     head("bluelatex", BlueLaTeXInfo.version)
+    opt[String]('c', "config") valueName ("<file>") action {
+      case (f, o) =>
+        o.copy(conf = Some(f))
+    } text ("Specify the configuration file to use")
     opt[Unit]('d', "debug") action {
       case ((), o) =>
         o.copy(debug = true)
@@ -44,7 +48,13 @@ object BlueLaTeX extends App {
 
   val options = optionParser.parse(args, CmdLine()) match {
 
-    case Some(CmdLine(debug)) =>
+    case Some(CmdLine(debug, conf)) =>
+
+      for (c <- conf) {
+        System.setProperty("config.file", c)
+        ConfigFactory.invalidateCaches()
+      }
+
       val logger = LoggerFactory.getLogger(getClass)
 
       // create the server

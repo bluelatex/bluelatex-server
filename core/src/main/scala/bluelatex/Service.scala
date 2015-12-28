@@ -16,14 +16,17 @@
 package bluelatex
 
 import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.Directives
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+
+import akka.actor.ActorSystem
 
 /** A \BlueLaTeX service must extend this trait and specify the
  *  API.
  *
  */
-trait Service extends SprayJsonSupport with BlueLaTeXProtocol {
+abstract class Service(val system: ActorSystem) extends SprayJsonSupport with BlueLaTeXProtocol with Directives {
 
   def route: Route
 

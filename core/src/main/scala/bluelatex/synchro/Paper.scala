@@ -40,8 +40,6 @@ import java.util.{
 
 import name.fraser.neil.plaintext.DiffMatchPatch
 
-import scala.annotation.tailrec
-
 import java.io.FileNotFoundException
 
 /** This actor handles synchronisation of documents.

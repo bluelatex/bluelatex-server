@@ -47,7 +47,10 @@ class Server extends StdReaders {
   val route =
     services match {
       case s :: sl =>
-        def serv(s: String): Service = Class.forName(s).newInstance.asInstanceOf[Service]
+        def serv(s: String): Service = {
+          val const = Class.forName(s).getConstructor(classOf[ActorSystem])
+          const.newInstance(system).asInstanceOf[Service]
+        }
         sl.foldLeft(serv(s).route)((acc, s) => acc ~ serv(s).route)
       case Nil =>
         reject
