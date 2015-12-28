@@ -14,10 +14,30 @@
  * limitations under the License.
  */
 package bluelatex
-package persistence
 
-case class Save(d: Data)
+import spray.json._
 
-case class Delete(p: Path)
+package object synchro {
+  type PeerId = String
+  type PaperId = String
+  type Filepath = List[String]
 
-case class Load(p: Path)
+  def leavingMessage(paperId: String) =
+    JsObject(
+      Map(
+        "event" -> JsString("part"),
+        "paperid" -> JsString(paperId)))
+
+  def joiningMessage(paperId: String) =
+    JsObject(
+      Map(
+        "event" -> JsString("join"),
+        "paperid" -> JsString(paperId)))
+
+  def idlingMessage(paperId: String) =
+    JsObject(
+      Map(
+        "event" -> JsString("idle"),
+        "paperid" -> JsString(paperId)))
+
+}

@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package bluelatex.persistence
+package bluelatex
+package persistence
 
 import akka.actor.{
   Actor,
@@ -49,21 +50,17 @@ class FsStoreTest(_system: ActorSystem)
 
   def this() = this(ActorSystem("fsstore-test-system"))
 
-  val data = Container("toto")(
-    mu.Set(
-      Container("tata")(
-        mu.Set(
-          Leaf("titi")("piouc"),
-          Leaf("tutu")("plop"))),
-      Leaf("tete")("gloups")))
+  val data = Data("toto")
+  data(List("tata", "titi")) = "piouc"
+  data(List("tata", "tutu")) = "plop"
+  data("tete") = "gloups"
 
   val base = File.newTempDir()
 
-  val toto = base / "toto"
-  val tata = toto / "tata"
+  val tata = base / "tata"
   val titi = tata / "titi"
   val tutu = tata / "tutu"
-  val tete = toto / "tete"
+  val tete = base / "tete"
 
   val actor = system.actorOf(Props(classOf[FsStore], base), base.name)
 
@@ -82,28 +79,28 @@ class FsStoreTest(_system: ActorSystem)
   }
 
   it should "be loaded from FS when Load message is sent" in {
-    actor ! Load(List("toto"))
+    actor ! Load(List())
 
-    val cont = expectMsgClass(classOf[Container])
+    val data = expectMsgClass(classOf[Data])
 
-    cont.name should be("toto")
-    cont.elements.foreach {
-      case c @ Container("tata") =>
-        c.elements should be(mu.Set(Leaf("titi")("piouc"), Leaf("tutu")("plop")))
-      case l @ Leaf("tete") =>
-        l.content should be("gloups")
-      case _ =>
+    data.foreach {
+      case (List("tata", "titi"), s) =>
+        s should be("piouc")
+      case (List("tata", "tutu"), s) =>
+        s should be("plop")
+      case (List("tete"), s) =>
+        s should be("gloups")
+      case (p, s) =>
         fail("Unexpected data")
     }
   }
 
   it should "be deleted from FS when Delete message is sent" in {
 
-    actor ! Delete(List("toto", "tata"))
+    actor ! Delete(List("tata"))
 
     expectMsg(Unit)
 
-    toto.isDirectory should be(true)
     tata.exists should be(false)
     titi.exists should be(false)
     tutu.exists should be(false)
