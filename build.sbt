@@ -46,7 +46,8 @@ lazy val coreDeps = Seq(
   "net.ceedubs" %% "ficus" % "1.1.2",
   "com.github.pathikrit" %% "better-files" % "2.13.0",
   "com.lihaoyi" %% "fastparse" % "0.3.3",
-  "com.typesafe" % "config" % "1.3.0")
+  "com.typesafe" % "config" % "1.3.0",
+  "com.github.scopt" %% "scopt" % "3.3.0")
 
 lazy val core = project
   .enablePlugins(BuildInfoPlugin)
