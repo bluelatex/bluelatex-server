@@ -20,7 +20,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 
-import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.Future
 
@@ -28,7 +28,9 @@ import config._
 
 import org.slf4j.LoggerFactory
 
-class Server(conf: Config) extends StdReaders {
+class Server extends StdReaders {
+
+  val conf = ConfigFactory.load
 
   val logger = LoggerFactory.getLogger(getClass)
 

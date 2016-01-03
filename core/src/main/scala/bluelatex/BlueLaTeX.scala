@@ -26,24 +26,47 @@ import org.slf4j.LoggerFactory
 
 import scala.io.StdIn
 
+import scopt.OptionParser
+
 /** The entry point of the \BlueLaTeX application.
  *  It starts everything, loads the configuration and the logging settings.
  *
  */
 object BlueLaTeX extends App {
 
-  val logger = LoggerFactory.getLogger(getClass)
-
-  // create the server
-  val server = new Server(ConfigFactory.load)
-
-  sys.addShutdownHook {
-    logger.info("\\BlueLaTeX has been killed")
-    server.stop()
+  val optionParser = new OptionParser[CmdLine]("bluelatex") {
+    head("bluelatex", BlueLaTeXInfo.version)
+    opt[Unit]('d', "debug") action {
+      case ((), o) =>
+        o.copy(debug = true)
+    } text ("Start \\BlueLaTeX in debug mode, allowing to stop it from the command line")
   }
 
-  server.start()
+  val options = optionParser.parse(args, CmdLine()) match {
 
-  logger.info("\\BlueLaTeX is up and running")
+    case Some(CmdLine(debug)) =>
+      val logger = LoggerFactory.getLogger(getClass)
+
+      // create the server
+      val server = new Server
+
+      sys.addShutdownHook {
+        logger.info("\\BlueLaTeX has been killed")
+        server.stop()
+      }
+
+      server.start()
+
+      logger.info("\\BlueLaTeX is up and running")
+
+      if (debug) {
+        println("Press enter to stop server")
+        StdIn.readLine
+        server.stop()
+      }
+
+    case None =>
+    // error message has been displayed, just don't do anything at all
+  }
 
 }
