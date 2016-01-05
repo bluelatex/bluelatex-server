@@ -28,7 +28,6 @@ import akka.actor.{
   PoisonPill,
   Props,
   ReceiveTimeout,
-  Stash,
   Status,
   Terminated
 }
@@ -66,7 +65,7 @@ object FsStore {
 
 }
 
-class FsStore(file: File) extends Actor with Stash {
+class FsStore(file: File) extends Actor {
 
   import FsStore._
 
@@ -138,13 +137,10 @@ class FsStore(file: File) extends Actor with Stash {
       case Nil =>
         file match {
           case Directory(files) =>
-            val d = Data()
             val children =
-              for (f <- files) {
-                val child = load(f, Nil)
-                d(f.name) = child
-              }
-            d
+              for (f <- files)
+                yield (f.name, load(f, Nil))
+            Data(children = children.toMap)
           case f @ RegularFile(_) =>
             Data(f.contentAsString)
           case _ =>

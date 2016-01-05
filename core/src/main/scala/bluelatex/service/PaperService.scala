@@ -100,7 +100,7 @@ trait PaperService {
                 }
               }
             }
-          }
         }
+    }
 
 }

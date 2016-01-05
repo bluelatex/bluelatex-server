@@ -50,10 +50,7 @@ class FsStoreTest(_system: ActorSystem)
 
   def this() = this(ActorSystem("fsstore-test-system"))
 
-  val data = Data("toto")
-  data(List("tata", "titi")) = "piouc"
-  data(List("tata", "tutu")) = "plop"
-  data("tete") = "gloups"
+  val data = Data().updated(List("tata", "titi"), "piouc").updated(List("tata", "tutu"), "plop").updated("tete", "gloups")
 
   val base = File.newTempDir()
 
@@ -85,11 +82,11 @@ class FsStoreTest(_system: ActorSystem)
 
     data.foreach {
       case (List("tata", "titi"), s) =>
-        s should be("piouc")
+        s should be(StringData("piouc"))
       case (List("tata", "tutu"), s) =>
-        s should be("plop")
+        s should be(StringData("plop"))
       case (List("tete"), s) =>
-        s should be("gloups")
+        s should be(StringData("gloups"))
       case (p, s) =>
         fail("Unexpected data")
     }
