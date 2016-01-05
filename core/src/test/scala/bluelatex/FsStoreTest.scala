@@ -36,17 +36,20 @@ import akka.testkit.{
 import org.scalatest.FlatSpecLike
 import org.scalatest.Matchers
 import org.scalatest.BeforeAndAfterAll
+import org.scalatest.OptionValues
 
 import scala.collection.{ mutable => mu }
 
 import better.files._
+import Cmds._
 
 class FsStoreTest(_system: ActorSystem)
     extends TestKit(_system)
     with ImplicitSender
     with FlatSpecLike
     with Matchers
-    with BeforeAndAfterAll {
+    with BeforeAndAfterAll
+    with OptionValues {
 
   def this() = this(ActorSystem("fsstore-test-system"))
 
@@ -58,8 +61,12 @@ class FsStoreTest(_system: ActorSystem)
   val titi = tata / "titi"
   val tutu = tata / "tutu"
   val tete = base / "tete"
+  val toto = tata / "toto"
 
-  val actor = system.actorOf(Props(classOf[FsStore], base), base.name)
+  mkdirs(tata)
+  toto.write("pimp")
+
+  val actor = system.actorOf(Props(classOf[FsStore], base, Set.empty), base.name)
 
   override def afterAll {
     TestKit.shutdownActorSystem(system)
@@ -75,18 +82,27 @@ class FsStoreTest(_system: ActorSystem)
 
   }
 
+  it should "not delete other present files in directories" in {
+    toto.exists should be(true)
+    toto.contentAsString should be("pimp")
+  }
+
   it should "be loaded from FS when Load message is sent" in {
     actor ! Load(List())
 
-    val data = expectMsgClass(classOf[Data])
+    val data = expectMsgClass(classOf[Option[Data]])
 
-    data.foreach {
+    data should be('defined)
+
+    data.value.foreach {
       case (List("tata", "titi"), s) =>
-        s should be(StringData("piouc"))
+        s should be("piouc")
       case (List("tata", "tutu"), s) =>
-        s should be(StringData("plop"))
+        s should be("plop")
+      case (List("tata", "toto"), s) =>
+        s should be("pimp")
       case (List("tete"), s) =>
-        s should be(StringData("gloups"))
+        s should be("gloups")
       case (p, s) =>
         fail("Unexpected data")
     }
