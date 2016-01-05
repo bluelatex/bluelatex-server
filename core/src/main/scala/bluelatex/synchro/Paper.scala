@@ -71,8 +71,6 @@ class Paper(
         act
     }
 
-  private var documents: Data = Data()
-
   private var lastModificationTime = Calendar.getInstance().getTime()
 
   val logger = Logging(context.system, this)
@@ -86,14 +84,13 @@ class Paper(
 
   def starting: Receive = {
     case d: Data =>
-      documents = d
       unstashAll()
-      context.become(started)
+      context.become(started(d, Calendar.getInstance().getTime()))
 
     case Status.Failure(_: FileNotFoundException) =>
-      // if it does not exist yet, just use the fresh one
+      // if it does not exist yet, just use a fresh one
       unstashAll()
-      context.become(started)
+      context.become(started(Data(), Calendar.getInstance().getTime()))
 
     case Status.Failure(e) =>
       // log the error and stop actor
@@ -104,7 +101,7 @@ class Paper(
       stash()
   }
 
-  def started: Receive = {
+  def started(documents: Data, lastModificationTime: Date): Receive = {
 
     case Status.Failure(e) =>
       // log the error
@@ -116,17 +113,22 @@ class Paper(
 
     case GetDoc(path) =>
       // get or create document
-      sender ! documents.getOrElseUpdate(path, "")
+      documents.get(path) match {
+        case Some(d) =>
+          sender ! d
+        case None =>
+          context.become(started(documents.updated(path, ""), lastModificationTime))
+          sender ! ""
+      }
 
     case DeleteDoc(path) =>
       documents.delete(path)
 
     case UpdateDoc(path, content) =>
-      documents(path) = content
-      lastModificationTime = Calendar.getInstance.getTime
+      context.become(started(documents.updated(path, content), Calendar.getInstance.getTime))
 
     case PersistPaper =>
-      persistPapers()
+      store ! PSave(documents)
 
     case GetLastModificationDate =>
       sender ! lastModificationTime
@@ -134,17 +136,12 @@ class Paper(
     case Terminated(peer) =>
       peers -= peer.path.name
       // if all peers terminated, then terminate this paper representation
-      if (peers.isEmpty)
+      if (peers.isEmpty) {
+        logger.info(f"Stop command received for paper $paperId")
+        store ! PSave(documents)
         context.stop(self)
+      }
 
   }
-
-  override def postStop(): Unit = {
-    logger.info(f"Stop command received for paper $paperId")
-    persistPapers()
-  }
-
-  def persistPapers(): Unit =
-    store ! PSave(documents)
 
 }
