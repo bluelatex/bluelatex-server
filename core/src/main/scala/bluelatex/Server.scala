@@ -28,13 +28,12 @@ import config._
 
 import org.slf4j.LoggerFactory
 
-class Server extends StdReaders {
+class Server(implicit val system: ActorSystem) extends StdReaders {
 
   val conf = ConfigFactory.load
 
   val logger = LoggerFactory.getLogger(getClass)
 
-  implicit val system = ActorSystem("bluelatex")
   implicit val materializer = ActorMaterializer()
   implicit val ec = system.dispatcher
 

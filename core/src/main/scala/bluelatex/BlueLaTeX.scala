@@ -16,9 +16,6 @@
 package bluelatex
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Directives._
-import akka.stream.ActorMaterializer
 
 import com.typesafe.config.ConfigFactory
 
@@ -57,22 +54,31 @@ object BlueLaTeX extends App {
 
       val logger = LoggerFactory.getLogger(getClass)
 
-      // create the server
-      val server = new Server
+      implicit val system = ActorSystem("bluelatex")
 
-      sys.addShutdownHook {
-        logger.info("\\BlueLaTeX has been killed")
-        server.stop()
-      }
+      try {
 
-      server.start()
+        // create the server
+        val server = new Server
 
-      logger.info("\\BlueLaTeX is up and running")
+        sys.addShutdownHook {
+          logger.info("\\BlueLaTeX has been killed")
+          server.stop()
+        }
 
-      if (debug) {
-        println("Press enter to stop server")
-        StdIn.readLine
-        server.stop()
+        server.start()
+
+        logger.info("\\BlueLaTeX is up and running")
+
+        if (debug) {
+          println("Press enter to stop server")
+          StdIn.readLine
+          server.stop()
+        }
+      } catch {
+        case e: Exception =>
+          logger.error("Unable to start \\BlueLaTeX server. Stopping...", e)
+          system.shutdown()
       }
 
     case None =>
