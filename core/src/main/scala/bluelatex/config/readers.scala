@@ -84,6 +84,11 @@ trait StdReaders {
       config.getStringList(path).asScala.toList
   }
 
+  implicit object StringSetConfigReader extends ConfigReader[Set[String]] {
+    def read(config: Config, path: String) =
+      config.getStringList(path).asScala.toSet
+  }
+
   implicit object FileConfigReader extends ConfigReader[File] {
     def read(config: Config, path: String) =
       File(config.getString(path))

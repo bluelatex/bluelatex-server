@@ -16,11 +16,6 @@
 package bluelatex
 package persistence
 
-import scala.collection.mutable.{
-  Map,
-  Set
-}
-
 import akka.actor.{
   Actor,
   ActorRef,
@@ -65,7 +60,7 @@ object FsStore {
 
 }
 
-class FsStore(file: File) extends Actor {
+class FsStore(file: File, extensions: Set[String]) extends Actor {
 
   import FsStore._
 
@@ -120,7 +115,7 @@ class FsStore(file: File) extends Actor {
 
     } else data.content match {
       case Some(c) =>
-        file.overwrite(c)
+        file.overwrite(c)(codec)
       case None =>
         mkdirs(file)
     }
@@ -132,19 +127,24 @@ class FsStore(file: File) extends Actor {
       case h :: t => delete(file / h, t)
     }
 
-  private def load(file: File, path: List[String]): Data =
+  private def load(file: File, path: List[String]): Option[Data] =
     path match {
       case Nil =>
         file match {
           case Directory(files) =>
             val children =
-              for (f <- files)
-                yield (f.name, load(f, Nil))
-            Data(children = children.toMap)
+              for {
+                f <- files
+                d <- load(f, Nil)
+              } yield (f.name, d)
+            Some(Data(children = children.toMap))
           case f @ RegularFile(_) =>
-            Data(f.contentAsString)
+            if (extensions.isEmpty || f.extension.isEmpty || extensions.contains(f.extension.get))
+              Some(Data(f.contentAsString(codec)))
+            else
+              None
           case _ =>
-            throw new FileNotFoundException(f"$file is not a regular file or directory")
+            None
         }
       case h :: t =>
         load(file / h, t)
