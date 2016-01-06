@@ -114,11 +114,28 @@ class FsStoreTest(_system: ActorSystem)
 
     expectMsg(Unit)
 
+    tete.exists should be(true)
     tata.exists should be(false)
     titi.exists should be(false)
     tutu.exists should be(false)
+    toto.exists should be(false)
     tete.contentAsString should be("gloups")
 
+  }
+
+  "a file" should "only be saved to disk if it was modified" in {
+    val modificationTime = tete.lastModifiedTime
+
+    actor ! Save(data)
+
+    expectMsg(Unit)
+
+    tete.exists should be(true)
+    tata.exists should be(true)
+    titi.exists should be(true)
+    tutu.exists should be(true)
+    toto.exists should be(false)
+    tete.lastModifiedTime should be(modificationTime)
   }
 
 }

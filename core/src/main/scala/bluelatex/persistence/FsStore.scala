@@ -115,7 +115,8 @@ class FsStore(file: File, extensions: Set[String]) extends Actor {
 
     } else data.content match {
       case Some(c) =>
-        file.overwrite(c)(codec)
+        if (!file.exists || data.lastChanged > file.lastModifiedTime.toEpochMilli)
+          file.overwrite(c)(codec)
       case None =>
         mkdirs(file)
     }
