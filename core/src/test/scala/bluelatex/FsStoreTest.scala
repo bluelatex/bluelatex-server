@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package bluelatex.persistence
+package bluelatex
+package persistence
 
 import akka.actor.{
   Actor,
@@ -35,37 +36,37 @@ import akka.testkit.{
 import org.scalatest.FlatSpecLike
 import org.scalatest.Matchers
 import org.scalatest.BeforeAndAfterAll
+import org.scalatest.OptionValues
 
 import scala.collection.{ mutable => mu }
 
 import better.files._
+import Cmds._
 
 class FsStoreTest(_system: ActorSystem)
     extends TestKit(_system)
     with ImplicitSender
     with FlatSpecLike
     with Matchers
-    with BeforeAndAfterAll {
+    with BeforeAndAfterAll
+    with OptionValues {
 
   def this() = this(ActorSystem("fsstore-test-system"))
 
-  val data = Container("toto")(
-    mu.Set(
-      Container("tata")(
-        mu.Set(
-          Leaf("titi")("piouc"),
-          Leaf("tutu")("plop"))),
-      Leaf("tete")("gloups")))
+  val data = Data().updated(List("tata", "titi"), "piouc").updated(List("tata", "tutu"), "plop").updated("tete", "gloups")
 
   val base = File.newTempDir()
 
-  val toto = base / "toto"
-  val tata = toto / "tata"
+  val tata = base / "tata"
   val titi = tata / "titi"
   val tutu = tata / "tutu"
-  val tete = toto / "tete"
+  val tete = base / "tete"
+  val toto = tata / "toto"
 
-  val actor = system.actorOf(Props(classOf[FsStore], base), base.name)
+  mkdirs(tata)
+  toto.write("pimp")
+
+  val actor = system.actorOf(Props(classOf[FsStore], base, Set.empty), base.name)
 
   override def afterAll {
     TestKit.shutdownActorSystem(system)
@@ -81,34 +82,60 @@ class FsStoreTest(_system: ActorSystem)
 
   }
 
+  it should "not delete other present files in directories" in {
+    toto.exists should be(true)
+    toto.contentAsString should be("pimp")
+  }
+
   it should "be loaded from FS when Load message is sent" in {
-    actor ! Load(List("toto"))
+    actor ! Load(List())
 
-    val cont = expectMsgClass(classOf[Container])
+    val data = expectMsgClass(classOf[Option[Data]])
 
-    cont.name should be("toto")
-    cont.elements.foreach {
-      case c @ Container("tata") =>
-        c.elements should be(mu.Set(Leaf("titi")("piouc"), Leaf("tutu")("plop")))
-      case l @ Leaf("tete") =>
-        l.content should be("gloups")
-      case _ =>
+    data should be('defined)
+
+    data.value.foreach {
+      case (List("tata", "titi"), s) =>
+        s should be("piouc")
+      case (List("tata", "tutu"), s) =>
+        s should be("plop")
+      case (List("tata", "toto"), s) =>
+        s should be("pimp")
+      case (List("tete"), s) =>
+        s should be("gloups")
+      case (p, s) =>
         fail("Unexpected data")
     }
   }
 
   it should "be deleted from FS when Delete message is sent" in {
 
-    actor ! Delete(List("toto", "tata"))
+    actor ! Delete(List("tata"))
 
     expectMsg(Unit)
 
-    toto.isDirectory should be(true)
+    tete.exists should be(true)
     tata.exists should be(false)
     titi.exists should be(false)
     tutu.exists should be(false)
+    toto.exists should be(false)
     tete.contentAsString should be("gloups")
 
+  }
+
+  "a file" should "only be saved to disk if it was modified" in {
+    val modificationTime = tete.lastModifiedTime
+
+    actor ! Save(data)
+
+    expectMsg(Unit)
+
+    tete.exists should be(true)
+    tata.exists should be(true)
+    titi.exists should be(true)
+    tutu.exists should be(true)
+    toto.exists should be(false)
+    tete.lastModifiedTime should be(modificationTime)
   }
 
 }

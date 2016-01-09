@@ -11,7 +11,7 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.11.7",
   scalacOptions in (Compile,doc) ++= Seq("-groups", "-implicits"),
   autoAPIMappings := true,
-  scalacOptions ++= Seq("-deprecation", "-feature")) ++ scalariformSettings ++ Seq(
+  scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked")) ++ scalariformSettings ++ Seq(
     ScalariformKeys.preferences := {
     ScalariformKeys.preferences.value
       .setPreference(AlignSingleLineCaseStatements, true)
@@ -26,6 +26,7 @@ lazy val bluelatex = project.in(file("."))
   .settings(
     name := "bluelatex",
     scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none",
+    fork := true,
     maintainer in Linux := "The \\BlueLaTeX Teams <blue-dev@lists.gnieh.org>",
     packageSummary in Linux := "\\BlueLaTeX core server",
     packageDescription := """\BlueLaTeX is a server that allows for real-time collaborative document editing.
@@ -37,15 +38,17 @@ lazy val bluelatex = project.in(file("."))
   .aggregate(core)
 
 lazy val coreDeps = Seq(
-  "com.typesafe.akka" %% "akka-http-experimental" % "2.0-M2",
-  "com.typesafe.akka" %% "akka-http-spray-json-experimental" % "2.0-M2",
+  "com.typesafe.akka" %% "akka-http-experimental" % "2.0.1",
+  "com.typesafe.akka" %% "akka-http-spray-json-experimental" % "2.0.1",
   "com.typesafe.akka" %% "akka-testkit" % "2.4.1" % "test",
   "org.scalatest" %% "scalatest" % "2.2.4" % "test",
   "ch.qos.logback" % "logback-classic" % "1.1.3",
   "org.slf4j" % "jcl-over-slf4j" % "1.7.13",
   "net.ceedubs" %% "ficus" % "1.1.2",
   "com.github.pathikrit" %% "better-files" % "2.13.0",
-  "com.typesafe" % "config" % "1.3.0")
+  "com.lihaoyi" %% "fastparse" % "0.3.3",
+  "com.typesafe" % "config" % "1.3.0",
+  "com.github.scopt" %% "scopt" % "3.3.0")
 
 lazy val core = project
   .enablePlugins(BuildInfoPlugin)

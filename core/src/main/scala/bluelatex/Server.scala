@@ -20,7 +20,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 
-import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.Future
 
@@ -28,11 +28,12 @@ import config._
 
 import org.slf4j.LoggerFactory
 
-class Server(conf: Config) extends StdReaders {
+class Server(implicit val system: ActorSystem) extends StdReaders {
+
+  val conf = ConfigFactory.load
 
   val logger = LoggerFactory.getLogger(getClass)
 
-  implicit val system = ActorSystem("bluelatex")
   implicit val materializer = ActorMaterializer()
   implicit val ec = system.dispatcher
 
@@ -45,7 +46,10 @@ class Server(conf: Config) extends StdReaders {
   val route =
     services match {
       case s :: sl =>
-        def serv(s: String): Service = Class.forName(s).newInstance.asInstanceOf[Service]
+        def serv(s: String): Service = {
+          val const = Class.forName(s).getConstructor(classOf[ActorSystem])
+          const.newInstance(system).asInstanceOf[Service]
+        }
         sl.foldLeft(serv(s).route)((acc, s) => acc ~ serv(s).route)
       case Nil =>
         reject

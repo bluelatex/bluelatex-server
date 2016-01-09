@@ -15,19 +15,29 @@
  */
 package bluelatex
 
-import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.server.Directives
+import spray.json._
 
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+package object synchro {
+  type PeerId = String
+  type PaperId = String
+  type Filepath = List[String]
 
-import akka.actor.ActorSystem
+  def leavingMessage(paperId: String) =
+    JsObject(
+      Map(
+        "event" -> JsString("part"),
+        "paperid" -> JsString(paperId)))
 
-/** A \BlueLaTeX service must extend this trait and specify the
- *  API.
- *
- */
-abstract class Service(val system: ActorSystem) extends SprayJsonSupport with BlueLaTeXProtocol with Directives {
+  def joiningMessage(paperId: String) =
+    JsObject(
+      Map(
+        "event" -> JsString("join"),
+        "paperid" -> JsString(paperId)))
 
-  def route: Route
+  def idlingMessage(paperId: String) =
+    JsObject(
+      Map(
+        "event" -> JsString("idle"),
+        "paperid" -> JsString(paperId)))
 
 }

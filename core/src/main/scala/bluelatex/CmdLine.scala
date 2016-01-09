@@ -13,21 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package bluelatex.persistence
+package bluelatex
 
-import scala.collection.mutable.Set
-
-/** Some data to persist.
- *  Data is organized as a tree of `Container`s composed of sub-data.
- *  Leaves represent the content.
- *  This abstraction makes it possible have several storage kinds.
- *  Typically, in a filesystem storage, containers are directories and leaves are files.
- *
- */
-sealed trait Data {
-  val name: String
-}
-
-final case class Container(name: String)(var elements: Set[Data]) extends Data
-
-final case class Leaf(name: String)(var content: String) extends Data
+case class CmdLine(debug: Boolean = false, conf: Option[String] = None)

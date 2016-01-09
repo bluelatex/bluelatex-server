@@ -16,13 +16,43 @@
 package bluelatex
 package service
 
-import akka.http.scaladsl.server.Directives._
+import config._
+
+import persistence._
+
+import synchro._
+
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model.ContentTypes._
 
 import spray.json._
 
-class CoreService extends Service {
+import akka.actor.{
+  ActorSystem,
+  ActorRef,
+  Props
+}
+
+import com.typesafe.config.ConfigFactory
+
+import better.files.File
+
+class CoreService(system: ActorSystem) extends Service(system) with PaperService {
+
+  val conf =
+    ConfigFactory.load()
+
+  val persistenceDir =
+    conf.as[File]("bluelatex.persistence.fs.directory")
+
+  val synchronizedExtensions =
+    conf.as[Set[String]]("bluelatex.synchronization.extensions.latex")
+
+  val store =
+    system.actorOf(Props(classOf[FsStore], persistenceDir, synchronizedExtensions), "bluelatex-store")
+
+  val synchronizer =
+    system.actorOf(Props(classOf[Synchronizer], store), "bluelatex-synchronizer")
 
   def route =
     path("info") {
@@ -33,6 +63,7 @@ class CoreService extends Service {
             "scalaVersion" -> JsString(BlueLaTeXInfo.scalaVersion),
             "buildTime" -> JsNumber(BlueLaTeXInfo.buildTime)))
       complete(info)
-    }
+    } ~
+      paperRoute
 
 }
